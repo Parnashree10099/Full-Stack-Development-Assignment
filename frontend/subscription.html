@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subscription</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            margin: 0;
+        }
+
+        header {
+            background: #2563eb;
+            color: white;
+            padding: 20px;
+        }
+
+        header h1 {
+            margin: 0;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+
+        .plans {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 25px;
+        }
+
+        .plan {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 3px 12px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .plan h2 {
+            color: #2563eb;
+        }
+
+        .plan p {
+            font-size: 18px;
+        }
+
+        .plan button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .plan button:hover {
+            background: #1d4ed8;
+        }
+
+        #message {
+            text-align: center;
+            margin: 25px 0;
+            font-weight: bold;
+        }
+
+        .back {
+            display: block;
+            margin-top: 30px;
+            text-align: center;
+            color: #2563eb;
+            text-decoration: none;
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <h1>Subscription Plans</h1>
+</header>
+
+<div class="container">
+
+    <div id="message"></div>
+
+    <div class="plans" id="plans">
+        Loading plans...
+    </div>
+
+    <a class="back" href="dashboard.html">
+        ← Back to Dashboard
+    </a>
+
+</div>
+
+<script>
+
+    const token = localStorage.getItem("access_token");
+
+if (!token) {
+    window.location.href = "login.html";
+}
+
+    async function loadPlans() {
+
+        try {
+
+            const token = localStorage.getItem("access_token");
+
+const response = await fetch(
+    "http://127.0.0.1:8000/api/subscriptions",
+    {
+        headers: {
+            "Authorization": `Bearer ${token}`
+        }
+    }
+);
+
+            const data = await response.json();
+
+            const plansContainer = document.getElementById("plans");
+
+            plansContainer.innerHTML = "";
+
+            data.plans.forEach(function(plan) {
+
+                const planDiv = document.createElement("div");
+
+                planDiv.className = "plan";
+
+                planDiv.innerHTML = `
+                    <h2>${plan.name}</h2>
+
+                    <p>Price: ₹${plan.amount}</p>
+
+                    <p>Credits: ${plan.credits}</p>
+
+                    <button onclick="subscribe(${plan.id})">
+                        Subscribe
+                    </button>
+                `;
+
+                plansContainer.appendChild(planDiv);
+
+            });
+
+        } catch (error) {
+
+            document.getElementById("plans").textContent =
+                "Could not load subscription plans.";
+
+        }
+    }
+
+
+    async function subscribe(planId) {
+
+    const message = document.getElementById("message");
+
+    try {
+
+        const token = localStorage.getItem("access_token");
+
+        const response = await fetch(
+            "http://127.0.0.1:8000/api/subscribe",
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
+                },
+
+                body: JSON.stringify({
+                    plan_id: planId
+                })
+            }
+        );
+
+        const data = await response.json();
+
+        if (response.ok) {
+
+            message.style.color = "green";
+
+            message.textContent =
+                `${data.message} ${data.credits_added} credits added. Wallet balance: ${data.wallet_balance}`;
+
+        } else {
+
+            message.style.color = "red";
+
+            message.textContent =
+                data.detail || "Subscription failed.";
+
+        }
+
+    } catch (error) {
+
+        console.error(error);
+
+        message.style.color = "red";
+
+        message.textContent =
+            "Could not connect to the server.";
+
+    }
+}
+loadPlans();
+
+</script>
+
+</body>
+</html>

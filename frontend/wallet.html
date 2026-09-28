@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Wallet</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            margin: 0;
+            padding: 30px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+
+        .balance-card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+            margin-bottom: 25px;
+        }
+
+        .balance {
+            font-size: 35px;
+            font-weight: bold;
+            color: #2563eb;
+            margin-top: 10px;
+        }
+
+        .history-card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+
+        .transaction {
+            padding: 15px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .transaction:last-child {
+            border-bottom: none;
+        }
+
+        .amount {
+            font-weight: bold;
+            color: green;
+        }
+
+        .back {
+            display: inline-block;
+            margin-top: 20px;
+            text-decoration: none;
+            color: #2563eb;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>My Wallet</h1>
+
+    <div class="balance-card">
+        <h2>Wallet Balance</h2>
+        <div class="balance" id="walletBalance">
+            Loading...
+        </div>
+        <p>Credits available</p>
+    </div>
+
+    <div class="history-card">
+        <h2>Transaction History</h2>
+
+        <div id="transactionHistory">
+            Loading transactions...
+        </div>
+    </div>
+
+    <a href="dashboard.html" class="back">← Back to Dashboard</a>
+
+</div>
+
+<script>
+
+const userId = localStorage.getItem("user_id");
+async function loadWallet() {
+
+    try {
+
+        const token = localStorage.getItem("access_token");
+
+        const response = await fetch("/api/wallet", {
+            headers: {
+                "Authorization": `Bearer ${token}`
+            }
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(
+                data.detail || "Unable to load wallet"
+            );
+        }
+
+        document.getElementById("walletBalance").textContent =
+            data.balance + " credits";
+
+    } catch (error) {
+
+        document.getElementById("walletBalance").textContent =
+            "Could not load wallet";
+
+        console.error("Wallet loading error:", error);
+    }
+}
+
+
+async function loadTransactions() {
+
+    try {
+
+        const token = localStorage.getItem("access_token");
+
+        const response = await fetch("/api/wallet/transactions", {
+            headers: {
+                "Authorization": `Bearer ${token}`
+            }
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(
+                data.detail || "Unable to load transactions"
+            );
+        }
+
+        const history =
+            document.getElementById("transactionHistory");
+
+        history.innerHTML = "";
+
+        if (data.transactions.length === 0) {
+
+            history.innerHTML =
+                "<p>No transactions found.</p>";
+
+            return;
+        }
+
+        data.transactions.forEach(function(transaction) {
+
+            const div = document.createElement("div");
+
+            div.className = "transaction";
+
+            div.innerHTML = `
+                <div>
+                    <strong>${transaction.type || "Credit"}</strong>
+                </div>
+
+                <div class="amount">
+                    +${transaction.amount} credits
+                </div>
+
+                <div>
+                    ${transaction.description}
+                </div>
+            `;
+
+            history.appendChild(div);
+        });
+
+    } catch (error) {
+
+        document.getElementById("transactionHistory").textContent =
+            "Could not load transactions.";
+
+        console.error("Transaction loading error:", error);
+    }
+}
+
+
+loadWallet();
+loadTransactions();
+
+</script>
+
+</body>
+</html>

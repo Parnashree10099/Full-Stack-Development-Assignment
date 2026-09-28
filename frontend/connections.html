@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connections</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            margin: 0;
+        }
+
+        header {
+            background: #2563eb;
+            color: white;
+            padding: 20px;
+        }
+
+        header h1 {
+            margin: 0;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 30px auto;
+            padding: 20px;
+        }
+
+        .section {
+            background: white;
+            padding: 20px;
+            margin-bottom: 25px;
+            border-radius: 10px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+        }
+
+        .user {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 7px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button.reject {
+            background: #dc2626;
+        }
+
+        button.accept {
+            background: #16a34a;
+        }
+
+        .message {
+            margin: 10px 0;
+            font-weight: bold;
+        }
+
+        .back {
+            display: inline-block;
+            margin-top: 10px;
+            color: #2563eb;
+            text-decoration: none;
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <h1>Connections</h1>
+</header>
+
+<div class="container">
+
+    <div class="section">
+        <h2>Find Users</h2>
+        <div id="usersList">Loading users...</div>
+    </div>
+
+    <div class="section">
+        <h2>Pending Requests</h2>
+        <div id="requestsList">Loading requests...</div>
+    </div>
+
+    <div class="section">
+        <h2>My Connections</h2>
+        <div id="connectionsList">Loading connections...</div>
+    </div>
+
+    <p id="message" class="message"></p>
+
+    <a class="back" href="dashboard.html">
+        ← Back to Dashboard
+    </a>
+
+</div>
+
+<script>
+
+    const userId = localStorage.getItem("user_id");
+
+    if (!userId) {
+        window.location.href = "login.html";
+    }
+
+
+    // Show message
+function showMessage(text, success = true) {
+
+    const message = document.getElementById("message");
+
+    if (typeof text === "object") {
+        text = text.detail || text.message || JSON.stringify(text);
+    }
+
+    message.textContent = text;
+    message.style.color = success ? "green" : "red";
+
+}
+
+
+// Load all other users
+async function loadUsers() {
+
+    try {
+
+        const token = localStorage.getItem("access_token");
+
+        const response = await fetch(
+            "http://127.0.0.1:8000/api/users",
+            {
+                headers: {
+                    "Authorization": `Bearer ${token}`
+                }
+            }
+        );
+
+        const data = await response.json();
+
+        const list = document.getElementById("usersList");
+
+        list.innerHTML = "";
+
+        if (data.users.length === 0) {
+
+            list.textContent = "No other users found.";
+            return;
+
+        }
+
+        data.users.forEach(function(user) {
+
+            const div = document.createElement("div");
+
+            div.className = "user";
+
+            div.innerHTML = `
+                <div>
+                    <strong>${user.name}</strong><br>
+                    ${user.email}
+                </div>
+
+                <button onclick="sendRequest(${user.id})">
+                    Connect
+                </button>
+            `;
+
+            list.appendChild(div);
+
+        });
+
+    } catch (error) {
+
+        console.error(error);
+
+        document.getElementById("usersList").textContent =
+            "Could not load users.";
+
+    }
+}
+
+
+    // Send connection request
+async function sendRequest(receiverId) {
+
+    try {
+
+        const token = localStorage.getItem("access_token");
+
+        const response = await fetch(
+            "http://127.0.0.1:8000/api/connect",
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
+                },
+
+                body: JSON.stringify({
+                    receiver_id: receiverId
+                })
+            }
+        );
+
+        const data = await response.json();
+
+        if (response.ok) {
+
+            showMessage(data.message, true);
+
+        } else {
+
+            showMessage(data.detail, false);
+
+        }
+
+    } catch (error) {
+
+        console.error(error);
+
+        showMessage(
+            "Could not connect to server.",
+            false
+        );
+
+    }
+}
+
+
+    // Load pending requests
+async function loadRequests() {
+
+    try {
+
+        const token = localStorage.getItem("access_token");
+
+        const response = await fetch(
+            "http://127.0.0.1:8000/api/connect/requests",
+            {
+                headers: {
+                    "Authorization": `Bearer ${token}`
+                }
+            }
+        );
+
+        const data = await response.json();
+
+        const list = document.getElementById("requestsList");
+
+        list.innerHTML = "";
+
+        if (data.requests.length === 0) {
+
+            list.textContent = "No pending requests.";
+            return;
+
+        }
+
+        data.requests.forEach(function(request) {
+
+            const div = document.createElement("div");
+
+            div.className = "user";
+
+            div.innerHTML = `
+                <div>
+                    <strong>${request.sender_name}</strong><br>
+                    ${request.sender_email}
+                </div>
+
+                <div>
+                    <button class="accept"
+                        onclick="acceptRequest(${request.connection_id})">
+                        Accept
+                    </button>
+
+                    <button class="reject"
+                        onclick="rejectRequest(${request.connection_id})">
+                        Reject
+                    </button>
+                </div>
+            `;
+
+            list.appendChild(div);
+
+        });
+
+    } catch (error) {
+
+        console.error(error);
+
+        document.getElementById("requestsList").textContent =
+            "Could not load requests.";
+
+    }
+}
+
+
+    // Accept request
+async function acceptRequest(connectionId) {
+
+    try {
+
+        const token = localStorage.getItem("access_token");
+
+        const response = await fetch(
+            `http://127.0.0.1:8000/api/connect/${connectionId}/accept`,
+            {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${token}`
+                }
+            }
+        );
+
+        const data = await response.json();
+
+        if (response.ok) {
+
+            showMessage(data.message, true);
+
+            loadRequests();
+            loadConnections();
+
+        } else {
+
+            showMessage(data.detail, false);
+
+        }
+
+    } catch (error) {
+
+        console.error(error);
+
+        showMessage(
+            "Could not connect to server.",
+            false
+        );
+
+    }
+}
+
+    // Reject request
+async function rejectRequest(connectionId) {
+
+    try {
+
+        const token = localStorage.getItem("access_token");
+
+        const response = await fetch(
+            `http://127.0.0.1:8000/api/connect/${connectionId}/reject`,
+            {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${token}`
+                }
+            }
+        );
+
+        const data = await response.json();
+
+        if (response.ok) {
+
+            showMessage(data.message, true);
+
+            loadRequests();
+
+        } else {
+
+            showMessage(data.detail, false);
+
+        }
+
+    } catch (error) {
+
+        console.error(error);
+
+        showMessage(
+            "Could not connect to server.",
+            false
+        );
+
+    }
+}
+
+
+   // Load accepted connections
+async function loadConnections() {
+
+    try {
+
+        const token = localStorage.getItem("access_token");
+
+        const response = await fetch(
+            "http://127.0.0.1:8000/api/connections",
+            {
+                headers: {
+                    "Authorization": `Bearer ${token}`
+                }
+            }
+        );
+
+        const data = await response.json();
+
+        const list = document.getElementById("connectionsList");
+
+        list.innerHTML = "";
+
+        if (data.connections.length === 0) {
+
+            list.textContent = "No connections yet.";
+            return;
+
+        }
+
+        data.connections.forEach(function(user) {
+
+            const div = document.createElement("div");
+
+            div.className = "user";
+
+            div.innerHTML = `
+                <div>
+                    <strong>${user.name}</strong><br>
+                    ${user.email}
+                </div>
+
+                <button onclick="window.location.href='video_call.html?receiver_id=${user.id}'">
+                    📞 Call
+                </button>
+            `;
+
+            list.appendChild(div);
+
+        });
+
+    } catch (error) {
+
+        console.error(error);
+
+        document.getElementById("connectionsList").textContent =
+            "Could not load connections.";
+
+    }
+}
+
+
+    // Start a call
+    async function startCall(receiverId) {
+
+        try {
+
+            const response = await fetch(
+                "http://127.0.0.1:8000/api/calls",
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+
+                    body: JSON.stringify({
+                        caller_id: Number(userId),
+                        receiver_id: receiverId
+                    })
+                }
+            );
+
+            const data = await response.json();
+
+            if (response.ok) {
+
+                showMessage(
+                    "Call started! Call ID: " + data.call_id,
+                    true
+                );
+
+            } else {
+
+                showMessage(data.detail, false);
+
+            }
+
+        } catch (error) {
+
+            showMessage("Could not start call.", false);
+
+        }
+    }
+
+
+    loadUsers();
+    loadRequests();
+    loadConnections();
+
+</script>
+
+</body>
+</html>

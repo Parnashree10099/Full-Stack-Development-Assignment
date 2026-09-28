@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Documents & Ask AI</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            margin: 0;
+        }
+
+        header {
+            background: #2563eb;
+            color: white;
+            padding: 20px;
+        }
+
+        header h1 {
+            margin: 0;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 30px auto;
+            padding: 20px;
+        }
+
+        .section {
+            background: white;
+            padding: 25px;
+            margin-bottom: 25px;
+            border-radius: 10px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+        }
+
+        input[type="file"],
+        textarea,
+        select {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 10px;
+            margin-top: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #1d4ed8;
+        }
+
+        .message {
+            margin-top: 15px;
+            font-weight: bold;
+        }
+
+        .document {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 6px;
+        }
+
+        .qa-item {
+            border-left: 4px solid #2563eb;
+            background: #f8fafc;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .answer {
+            margin-top: 10px;
+        }
+
+        .back {
+            color: #2563eb;
+            text-decoration: none;
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <h1>Documents & Ask AI</h1>
+</header>
+
+<div class="container">
+
+    <!-- Upload PDF -->
+    <div class="section">
+
+        <h2>Upload PDF</h2>
+
+        <input type="file" id="pdfFile" accept=".pdf,application/pdf">
+
+        <button onclick="uploadPDF()">
+            Upload PDF
+        </button>
+
+        <p id="uploadMessage" class="message"></p>
+
+    </div>
+
+
+    <!-- Ask AI -->
+    <div class="section">
+
+        <h2>Ask AI About Your Document</h2>
+
+        <label>Select Document</label>
+
+        <select id="documentSelect">
+            <option value="">Loading documents...</option>
+        </select>
+
+        <label>Question</label>
+
+        <textarea
+            id="question"
+            placeholder="Ask a question about your PDF..."
+        ></textarea>
+
+        <button onclick="askAI()">
+            Ask Gemini
+        </button>
+
+        <div id="answer"></div>
+
+    </div>
+
+
+    <!-- Q&A History -->
+    <div class="section">
+
+        <h2>Q&A History</h2>
+
+        <div id="history">
+            Loading history...
+        </div>
+
+    </div>
+
+
+    <a class="back" href="dashboard.html">
+        ← Back to Dashboard
+    </a>
+
+</div>
+
+
+<script>
+
+    const userId = localStorage.getItem("user_id");
+
+    if (!userId) {
+        window.location.href = "login.html";
+    }
+
+
+    // Upload PDF
+async function uploadPDF() {
+
+    const fileInput = document.getElementById("pdfFile");
+    const message = document.getElementById("uploadMessage");
+
+    if (!fileInput.files.length) {
+        message.style.color = "red";
+        message.textContent = "Please select a PDF file.";
+        return;
+    }
+
+    const file = fileInput.files[0];
+
+    if (file.type !== "application/pdf") {
+        message.style.color = "red";
+        message.textContent = "Only PDF files are allowed.";
+        return;
+    }
+
+    const formData = new FormData();
+
+    formData.append("file", file);
+
+    try {
+
+        const token = localStorage.getItem("access_token");
+
+        const response = await fetch(
+            "http://127.0.0.1:8000/api/documents/upload",
+            {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${token}`
+                },
+                body: formData
+            }
+        );
+
+        const data = await response.json();
+
+        if (response.ok) {
+
+            message.style.color = "green";
+            message.textContent = data.message;
+
+            fileInput.value = "";
+
+            loadDocuments();
+
+        } else {
+
+            message.style.color = "red";
+            message.textContent =
+                data.detail || "Upload failed.";
+
+        }
+
+    } catch (error) {
+
+        message.style.color = "red";
+        message.textContent =
+            "Could not connect to the server.";
+
+        console.error("Upload error:", error);
+    }
+}
+
+
+// Load documents
+async function loadDocuments() {
+
+    const select = document.getElementById("documentSelect");
+
+    try {
+
+        const token = localStorage.getItem("access_token");
+
+        const response = await fetch("/api/documents", {
+            headers: {
+                "Authorization": `Bearer ${token}`
+            }
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(
+                data.detail || "Unable to load documents"
+            );
+        }
+
+        console.log("Documents received:", data);
+
+        select.innerHTML = "";
+
+        if (data.documents.length === 0) {
+
+            select.innerHTML =
+                '<option value="">No documents found</option>';
+
+            return;
+        }
+
+        data.documents.forEach(function(doc) {
+
+            const option = document.createElement("option");
+
+            option.value = doc.document_id;
+            option.textContent = doc.filename;
+
+            select.appendChild(option);
+
+        });
+
+    } catch (error) {
+
+        console.error("Document loading error:", error);
+
+        select.innerHTML =
+            '<option value="">Could not load documents</option>';
+    }
+}
+
+
+    // Ask Gemini
+async function askAI() {
+
+    const documentId =
+        document.getElementById("documentSelect").value;
+
+    const question =
+        document.getElementById("question").value.trim();
+
+    const answerBox =
+        document.getElementById("answer");
+
+
+    if (!documentId) {
+
+        answerBox.innerHTML =
+            '<p style="color:red;">Please select a document.</p>';
+
+        return;
+    }
+
+
+    if (!question) {
+
+        answerBox.innerHTML =
+            '<p style="color:red;">Please enter a question.</p>';
+
+        return;
+    }
+
+
+    answerBox.innerHTML =
+        "<p>Gemini is thinking... 🤖</p>";
+
+
+    try {
+
+        const token =
+            localStorage.getItem("access_token");
+
+        const response = await fetch(
+            "http://127.0.0.1:8000/api/documents/ask",
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
+                },
+
+                body: JSON.stringify({
+                    document_id: Number(documentId),
+                    question: question
+                })
+            }
+        );
+
+
+        const data = await response.json();
+
+
+        if (response.ok) {
+
+            answerBox.innerHTML = `
+                <div class="qa-item">
+                    <strong>Question:</strong>
+                    <p>${data.question}</p>
+
+                    <div class="answer">
+                        <strong>Gemini's Answer:</strong>
+                        <p>${data.answer}</p>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById("question").value = "";
+
+            loadHistory();
+
+        } else {
+
+            answerBox.innerHTML =
+                `<p style="color:red;">${data.detail || "Unable to get answer."}</p>`;
+
+        }
+
+    } catch (error) {
+
+        console.error("Ask Gemini error:", error);
+
+        answerBox.innerHTML =
+            '<p style="color:red;">Could not connect to the server.</p>';
+
+    }
+}
+
+
+    // Load Q&A history
+async function loadHistory() {
+
+    const historyBox =
+        document.getElementById("history");
+
+    try {
+
+        const token =
+            localStorage.getItem("access_token");
+
+        const response = await fetch(
+            "http://127.0.0.1:8000/api/documents/qa-history",
+            {
+                headers: {
+                    "Authorization": `Bearer ${token}`
+                }
+            }
+        );
+
+
+        const data = await response.json();
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                data.detail || "Unable to load Q&A history"
+            );
+
+        }
+
+
+        historyBox.innerHTML = "";
+
+
+        if (!data.history.length) {
+
+            historyBox.textContent =
+                "No questions asked yet.";
+
+            return;
+        }
+
+
+        data.history.forEach(function(item) {
+
+            const div =
+                document.createElement("div");
+
+            div.className = "qa-item";
+
+            div.innerHTML = `
+                <strong>Question:</strong>
+                <p>${item.question}</p>
+
+                <strong>Answer:</strong>
+                <p>${item.answer}</p>
+
+                <small>${item.created_at}</small>
+            `;
+
+            historyBox.appendChild(div);
+
+        });
+
+
+    } catch (error) {
+
+        console.error("Q&A history error:", error);
+
+        historyBox.textContent =
+            "Could not load Q&A history.";
+
+    }
+}
+
+
+    loadDocuments();
+    loadHistory();
+
+</script>
+
+</body>
+</html>

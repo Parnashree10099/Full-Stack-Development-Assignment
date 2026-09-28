@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Admin Dashboard</title>
+
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            margin: 0;
+            padding: 30px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+
+        .admin-info {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+            margin-bottom: 25px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+
+        .card h2 {
+            margin: 0;
+            font-size: 32px;
+            color: #2563eb;
+        }
+
+        .card p {
+            color: #555;
+            margin-top: 10px;
+        }
+
+        .error {
+            color: red;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .back {
+            display: inline-block;
+            margin-top: 30px;
+            text-decoration: none;
+            color: #2563eb;
+        }
+
+        @media (max-width: 700px) {
+            .stats {
+                grid-template-columns: 1fr;
+            }
+        }
+        .users-section {
+    background: white;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+    margin-top: 25px;
+}
+
+.users-section h2 {
+    margin-top: 0;
+}
+
+.user-row {
+    display: grid;
+    grid-template-columns: 1.2fr 2fr 1fr 1.2fr 1.2fr;
+    gap: 15px;
+    padding: 15px;
+    border-bottom: 1px solid #ddd;
+    align-items: center;
+}
+
+.user-row:last-child {
+    border-bottom: none;
+}
+
+.user-header {
+    font-weight: bold;
+    background: #f4f6f8;
+}
+
+.user-role {
+    font-weight: bold;
+}
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>Admin Dashboard</h1>
+
+    <div class="admin-info">
+        <h3>Administrator</h3>
+        <p id="adminName">Loading...</p>
+        <p id="adminEmail">Loading...</p>
+    </div>
+
+    <div class="stats">
+
+    <div class="card">
+        <h2 id="totalUsers">0</h2>
+        <p>Total Users</p>
+    </div>
+
+    <div class="card">
+        <h2 id="activeSubscriptions">0</h2>
+        <p>Active Subscriptions</p>
+    </div>
+
+    <div class="card">
+        <h2 id="walletBalance">0</h2>
+        <p>Total Wallet Credits</p>
+    </div>
+
+    <div class="card">
+        <h2 id="totalSpent">0</h2>
+        <p>Total Credits Spent</p>
+    </div>
+
+    <div class="card">
+        <h2 id="totalDocuments">0</h2>
+        <p>Total Documents</p>
+    </div>
+
+    <div class="card">
+        <h2 id="connectionRequests">0</h2>
+        <p>Connection Requests</p>
+    </div>
+
+    <div class="card">
+        <h2 id="totalCalls">0</h2>
+        <p>Total Calls</p>
+    </div>
+
+</div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Call ID</th>
+                <th>Caller ID</th>
+                <th>Receiver ID</th>
+                <th>Start Time</th>
+                <th>End Time</th>
+                <th>Duration</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+
+        <tbody id="callHistory">
+            <tr>
+                <td colspan="7">Loading...</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+    </div>
+
+    <div class="users-section">
+
+    <h2>All Users</h2>
+
+    <div id="usersList">
+        Loading users...
+    </div>
+
+</div>
+
+<p id="errorMessage" class="error"></p>
+
+<a href="dashboard.html" class="back">← Back to Dashboard</a>
+</div>
+
+
+<script>
+
+const userId = localStorage.getItem("user_id");
+const userRole = localStorage.getItem("user_role");
+
+document.getElementById("adminName").textContent =
+    localStorage.getItem("user_name") || "Admin";
+
+document.getElementById("adminEmail").textContent =
+    localStorage.getItem("user_email") || "";
+
+
+async function loadAdminDashboard() {
+
+    if (!userId) {
+        document.getElementById("errorMessage").textContent =
+            "Please login first.";
+        return;
+    }
+
+    if (userRole !== "admin") {
+        document.getElementById("errorMessage").textContent =
+            "Access denied. Admins only.";
+        return;
+    }
+
+    try {
+
+        const token = localStorage.getItem("access_token");
+
+
+const response = await fetch("/api/admin/dashboard", {
+    headers: {
+        "Authorization": `Bearer ${token}`
+    }
+});
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.detail || "Unable to load admin dashboard");
+        }
+
+        document.getElementById("totalUsers").textContent =
+            data.total_users;
+
+        document.getElementById("activeSubscriptions").textContent =
+            data.active_subscriptions;
+
+        document.getElementById("walletBalance").textContent =
+            data.total_wallet_balance;
+
+        document.getElementById("totalSpent").textContent =
+            data.total_spent;
+
+        document.getElementById("totalDocuments").textContent =
+            data.total_documents;
+
+        document.getElementById("connectionRequests").textContent =
+            data.total_connection_requests;
+
+        document.getElementById("totalCalls").textContent =
+            data.total_calls;
+
+    } catch (error) {
+
+        console.error("Admin dashboard error:", error);
+
+        document.getElementById("errorMessage").textContent =
+            error.message;
+    }
+}
+
+
+
+async function loadUsers() {
+
+    try {
+
+        const token = localStorage.getItem("access_token");
+
+        const response = await fetch("/api/admin/users", {
+            headers: {
+                "Authorization": `Bearer ${token}`
+            }
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(
+                data.detail || "Unable to load users"
+            );
+        }
+
+        const usersList =
+            document.getElementById("usersList");
+
+        usersList.innerHTML = `
+            <div class="user-row user-header">
+                <div>Name</div>
+                <div>Email</div>
+                <div>Role</div>
+                <div>Subscription</div>
+                <div>Wallet Credits</div>
+            </div>
+        `;
+
+        data.users.forEach(function(user) {
+
+            const row = document.createElement("div");
+
+            row.className = "user-row";
+
+            row.innerHTML = `
+                <div>${user.name}</div>
+                <div>${user.email}</div>
+                <div class="user-role">${user.role}</div>
+                <div>${user.subscription}</div>
+                <div>${user.wallet_balance}</div>
+            `;
+
+            usersList.appendChild(row);
+        });
+
+    } catch (error) {
+
+        console.error("User loading error:", error);
+
+        document.getElementById("usersList").textContent =
+            "Could not load users.";
+    }
+}
+async function loadCallHistory() {
+
+    try {
+
+        const token = localStorage.getItem("access_token");
+
+        const response = await fetch("/api/admin/calls", {
+            headers: {
+                "Authorization": `Bearer ${token}`
+            }
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(
+                data.detail || "Unable to load call history"
+            );
+        }
+
+        const callHistory =
+            document.getElementById("callHistory");
+
+        if (data.calls.length === 0) {
+
+            callHistory.innerHTML = `
+                <tr>
+                    <td colspan="7">No calls found.</td>
+                </tr>
+            `;
+
+            return;
+        }
+
+        callHistory.innerHTML = "";
+
+        data.calls.forEach(function(call) {
+
+            const row = document.createElement("tr");
+
+            row.innerHTML = `
+                <td>${call.call_id}</td>
+                <td>${call.caller_id}</td>
+                <td>${call.receiver_id}</td>
+                <td>${call.start_time || "-"}</td>
+                <td>${call.end_time || "-"}</td>
+                <td>${call.duration_seconds || 0} seconds</td>
+                <td>${call.status}</td>
+            `;
+
+            callHistory.appendChild(row);
+        });
+
+    } catch (error) {
+
+        console.error("Call history error:", error);
+
+        document.getElementById("callHistory").innerHTML = `
+            <tr>
+                <td colspan="7">Could not load call history.</td>
+            </tr>
+        `;
+    }
+}
+loadAdminDashboard();
+loadUsers();
+loadCallHistory();
+
+</script>
+
+</body>
+</html>

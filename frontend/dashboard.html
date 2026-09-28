@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Dashboard</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            margin: 0;
+        }
+
+        header {
+            background: #2563eb;
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header h1 {
+            margin: 0;
+        }
+
+        #logoutBtn {
+            background: white;
+            color: #2563eb;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 30px auto;
+            padding: 20px;
+        }
+
+        .welcome {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+        }
+
+        .card h3 {
+            margin-top: 0;
+            color: #555;
+        }
+
+        .card p {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 0;
+        }
+
+        .links {
+            background: white;
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        .links a {
+            display: block;
+            margin: 12px 0;
+            color: #2563eb;
+            text-decoration: none;
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+
+    <h1>User Dashboard</h1>
+
+    <button id="logoutBtn">Logout</button>
+
+</header>
+
+<div class="container">
+
+    <div class="welcome">
+
+        <h2>Welcome, <span id="userName"></span> 👋</h2>
+
+        <p>Email: <span id="userEmail"></span></p>
+
+    </div>
+
+    <div class="cards">
+
+        <div class="card">
+            <h3>Wallet Balance</h3>
+            <p id="walletBalance">Loading...</p>
+        </div>
+
+        <div class="card">
+            <h3>Connections</h3>
+            <p id="connectionCount">Loading...</p>
+        </div>
+
+        <div class="card">
+            <h3>Documents</h3>
+            <p>PDF & AI</p>
+        </div>
+
+        <div class="card">
+            <h3>Video Calls</h3>
+            <p>Available</p>
+        </div>
+
+    </div>
+
+    <div class="links">
+
+        <h2>Quick Links</h2>
+
+        <a href="subscription.html">💳 Subscription</a>
+
+        <a href="connections.html">🤝 Connections</a>
+
+        <a href="documents.html">📄 Documents & Ask AI</a>
+
+        <a href="video_call.html">📞 Video Calls</a>
+
+        <a href="wallet.html">💰 Wallet Transactions</a>
+        <a href="admin.html">🛠️ Admin Dashboard</a>
+
+    </div>
+
+</div>
+
+<script>
+
+    const token = localStorage.getItem("access_token");
+const userName = localStorage.getItem("user_name");
+const userEmail = localStorage.getItem("user_email");
+
+if (!token) {
+    window.location.href = "login.html";
+}
+
+    document.getElementById("userName").textContent = userName;
+    document.getElementById("userEmail").textContent = userEmail;
+
+
+    // Load wallet balance
+    async function loadWallet() {
+
+        try {
+
+            const token = localStorage.getItem("access_token");
+
+const response = await fetch(
+    "http://127.0.0.1:8000/api/wallet",
+    {
+        headers: {
+            "Authorization": `Bearer ${token}`
+        }
+    }
+);
+
+            const data = await response.json();
+
+            if (response.ok) {
+                document.getElementById("walletBalance").textContent =
+                    data.balance + " credits";
+            } else {
+                document.getElementById("walletBalance").textContent =
+                    "No wallet";
+            }
+
+        } catch (error) {
+
+            document.getElementById("walletBalance").textContent =
+                "Error";
+
+        }
+    }
+
+
+    // Load connections
+    async function loadConnections() {
+
+        try {
+
+           const token = localStorage.getItem("access_token");
+
+const response = await fetch(
+    "http://127.0.0.1:8000/api/connections",
+    {
+        headers: {
+            "Authorization": `Bearer ${token}`
+        }
+    }
+);
+
+            const data = await response.json();
+
+            if (response.ok) {
+                document.getElementById("connectionCount").textContent =
+                    data.connections.length;
+            } else {
+                document.getElementById("connectionCount").textContent =
+                    "0";
+            }
+
+        } catch (error) {
+
+            document.getElementById("connectionCount").textContent =
+                "Error";
+
+        }
+    }
+
+
+    // Logout
+    document.getElementById("logoutBtn").addEventListener("click", function() {
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("user_id");
+        localStorage.removeItem("user_name");
+        localStorage.removeItem("user_email");
+        localStorage.removeItem("user_role");
+
+        window.location.href = "login.html";
+
+    });
+
+
+    loadWallet();
+    loadConnections();
+
+</script>
+
+</body>
+</html>
